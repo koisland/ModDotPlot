@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import math
 import numpy as np
-from moddotplot.const import (
+from .const import (
     SEQUENTIAL_PALETTES,
     DIVERGING_PALETTES,
     QUALITATIVE_PALETTES,
@@ -10,7 +10,7 @@ from palettable import colorbrewer
 from typing import List, Set, Dict, Tuple
 import mmh3
 
-from moddotplot.parse_fasta import printProgressBar
+from .parse_fasta import printProgressBar
 
 
 def removeAmbiguousBases(mod_list, k):

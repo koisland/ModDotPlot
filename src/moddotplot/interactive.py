@@ -1,5 +1,5 @@
 import plotly.express as px
-from moddotplot.estimate_identity import (
+from .estimate_identity import (
     getInteractiveColor,
     getMatchingColors,
     makeDifferencesEqual,

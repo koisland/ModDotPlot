@@ -3,11 +3,13 @@ from plotnine import (
     ggplot,
     aes,
     geom_histogram,
+    geom_polygon,
     scale_color_discrete,
     element_blank,
     theme,
     xlab,
     scale_fill_manual,
+    scale_fill_gradientn,
     scale_color_cmap,
     coord_cartesian,
     ylab,
@@ -25,7 +27,7 @@ from plotnine import (
 import pandas as pd
 import numpy as np
 import math
-from moddotplot.const import (
+from .const import (
     DIVERGING_PALETTES,
     QUALITATIVE_PALETTES,
     SEQUENTIAL_PALETTES,
@@ -83,6 +85,17 @@ def get_colors(sdf, ncolors, is_freq, custom_breakpoints):
 def read_df_from_file(file_path):
     data = pd.read_csv(file_path, delimiter="\t")
     return data
+
+
+def generate_diamond(row: pd.Series, side_length: float):
+    x = row["w"]
+    y = row["z"]
+    base = np.array([[1, 0], [0, 1], [-1, 0], [0, -1]]) * np.sqrt(2) / 2
+    trans = (base * side_length) + np.array([x, y])
+    df = pd.DataFrame(trans, columns=["w", "z"])
+    df["discrete"] = row["discrete"]
+    df["group"] = row["group"]
+    return df
 
 
 def read_df(
@@ -250,16 +263,26 @@ def make_tri(sdf, title_name, palette, palette_orientation, colors):
         new_hexcodes = hexcodes
     if colors:
         new_hexcodes = colors
-    max_val = max(sdf["q_en"].max(), sdf["r_en"].max())
-    window = max(sdf["q_en"] - sdf["q_st"])
-    p = (
-        ggplot(sdf)
-        + geom_tile(
-            aes(x="q_st", y="r_st", fill="discrete", height=window, width=window)
+    
+    sdf["w"] = sdf["first_pos"] + sdf["second_pos"]
+    sdf["z"] = -sdf["first_pos"] + sdf["second_pos"]
+    sdf["group"] = range(sdf.shape[0])
+
+    tri_scale = sdf["q_st"].max() / sdf["w"].max()
+    window = max(sdf["q_en"] - sdf["q_st"]) / tri_scale
+
+    df_d = pd.concat(generate_diamond(row[1], window) for row in sdf.iterrows()).reset_index(drop=True)
+    df_d["x"] = tri_scale * df_d["w"]
+    df_d["y"] = df_d["z"] * window
+
+    plt = (
+        ggplot(df_d)
+        + geom_polygon(
+            aes(x="x", y="y", fill="discrete", group="group")
         )
         + scale_color_discrete(guide=False)
-        + scale_fill_manual(
-            values=new_hexcodes,
+        + scale_fill_gradientn(
+            colors=new_hexcodes,
             guide=False,
         )
         + theme(
@@ -268,6 +291,8 @@ def make_tri(sdf, title_name, palette, palette_orientation, colors):
             panel_grid_minor=element_blank(),
             plot_background=element_blank(),
             panel_background=element_blank(),
+            axis_text_y=element_blank(), 
+            axis_ticks_major_y=element_blank(),
             axis_line=element_line(color="black"),  # Adjust axis line size
             axis_text=element_text(
                 family=["DejaVu Sans"]
@@ -277,17 +302,15 @@ def make_tri(sdf, title_name, palette, palette_orientation, colors):
                 family=["DejaVu Sans"],  # Change title font family
             ),
         )
-        + scale_x_continuous(labels=make_scale, limits=[0, max_val])
-        + scale_y_continuous(labels=make_scale, limits=[0, max_val])
-        + coord_fixed(ratio=1)
-        + facet_grid("r ~ q")
+        + scale_x_continuous(labels=make_scale, limits=[0, None])
+        + scale_y_continuous(labels=make_scale, limits=[0, None])
         + labs(x="Genomic Position (Mbp)", y="", title=title_name)
     )
 
     # Adjust x-axis label size
-    p += theme(axis_title_x=element_text())
+    plt += theme(axis_title_x=element_text())
 
-    return p
+    return plt
 
 
 def make_hist(sdf, palette, palette_orientation, custom_colors, custom_breakpoints):
@@ -442,7 +465,7 @@ def create_plots(
         ggsave(
             tri_plot,
             width=9,
-            height=9,
+            height=6,
             dpi=dpi,
             format="pdf",
             filename=f"{plot_filename}_TRI.pdf",
@@ -451,7 +474,7 @@ def create_plots(
         ggsave(
             tri_plot,
             width=9,
-            height=9,
+            height=6,
             dpi=dpi,
             format="png",
             filename=f"{plot_filename}_TRI.png",

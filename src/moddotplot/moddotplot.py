@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 import sys
-from moddotplot.parse_fasta import (
+from .parse_fasta import (
     readKmersFromFile,
     getInputHeaders,
     isValidFasta,
     extractFiles,
 )
 
-from moddotplot.estimate_identity import (
+from .estimate_identity import (
     convertToModimizers,
     selfContainmentMatrix,
     pairwiseContainmentMatrix,
@@ -16,12 +16,12 @@ from moddotplot.estimate_identity import (
     createPairwiseMatrix,
     partitionOverlaps,
 )
-from moddotplot.interactive import run_dash
-from moddotplot.const import ASCII_ART, VERSION
+from .interactive import run_dash
+from .const import ASCII_ART, VERSION
 
 import argparse
 import math
-from moddotplot.static_plots import read_df_from_file, create_plots
+from .static_plots import read_df_from_file, create_plots
 import json
 import numpy as np
 import pickle
